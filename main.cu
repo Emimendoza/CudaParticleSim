@@ -42,7 +42,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 
 
 
-class ParticleSim
+class VulkanApp
 {
     public:
 
@@ -598,7 +598,7 @@ class ParticleSim
 
 int main(int argc, char** argv)
 {
-    ParticleSim app;
+    VulkanApp app;
 
     for(int i = 0; i<argc; i++)
     {
