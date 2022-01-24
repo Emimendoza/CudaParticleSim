@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <set>
 #include <optional>
 #include <stdexcept>
@@ -83,6 +84,7 @@ class ParticleSim
         }
         void cleanup()
         {
+            vkDestroySwapchainKHR(vkDevice, swapChain, nullptr);
             vkDestroyDevice(vkDevice, nullptr);
             if(enableValidationLayers)
             {
@@ -105,6 +107,10 @@ class ParticleSim
         VkQueue graphicsQueue;
         VkSurfaceKHR surface;
         VkQueue presentQueue;
+        VkSwapchainKHR swapChain;
+        std::vector<VkImage> swapChainImages;
+        VkFormat swapChainImageFormat;
+        VkExtent2D swapChainExtent;
 
 
         void createSwapChain()
@@ -120,10 +126,47 @@ class ParticleSim
             createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
             createInfo.surface = surface;
             createInfo.minImageCount = imageCount;
-            createInfo.imageFormat = surfaceFormat;
+            createInfo.imageFormat = surfaceFormat.format;
             createInfo.imageExtent = extent;
             createInfo.imageArrayLayers = 1;
             createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+            QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+            uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+
+            if (indices.graphicsFamily != indices.presentFamily)
+            {
+                createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+                createInfo.queueFamilyIndexCount = 2;
+                createInfo.pQueueFamilyIndices = queueFamilyIndices;
+            }
+            else
+            {
+                createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+                createInfo.queueFamilyIndexCount = 0;
+                createInfo.pQueueFamilyIndices = nullptr;
+            }
+
+            createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+            createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+            createInfo.presentMode = presentMode;
+            createInfo.clipped = VK_TRUE;
+            createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+            if(vkCreateSwapchainKHR(vkDevice, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
+            {
+                throw std::runtime_error("Error creating swap chain");
+            }
+
+            vkGetSwapchainImagesKHR(vkDevice, swapChain, &imageCount, nullptr);
+            swapChainImages.resize(imageCount);
+            vkGetSwapchainImagesKHR(vkDevice, swapChain, &imageCount, swapChainImages.data());
+            swapChainImageFormat = surfaceFormat.format;
+            swapChainExtent = extent;
+            if(printDebugMessages)
+            {
+                std::cout << "Swap Chain successfully created" << std::endl;
+            }
 
         }
         void createSurface()
@@ -143,6 +186,7 @@ class ParticleSim
                     return availableFormat;
                 }
             }
+            throw std::runtime_error("No supported VK Format available");
         }
         VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
         {
