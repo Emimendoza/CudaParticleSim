@@ -1,5 +1,5 @@
 #include <iostream>
-#include "VulkanApp.cpp"
+#include "VulkanApp.h"
 
 int main(int argc, char** argv)
 {
@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     if(app.enableValidationLayers)
     {
         std::cout << "Validation Layers Enabled: ";
-        for (auto validationLayer : validationLayers)
+        for (auto validationLayer : app.validationLayers)
         {
             std::cout << validationLayer << " ";
         }

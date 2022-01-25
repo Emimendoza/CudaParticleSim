@@ -3,7 +3,8 @@ project(Test CUDA)
 
 set(CMAKE_CUDA_STANDARD 20)
 
-add_executable(Test main.cu VulkanApp.cpp VulkanApp.h)
+
+add_executable(Test main.cu VulkanApp.h VulkanApp.cpp)
 
 
 target_link_libraries(Test -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi)
