@@ -54,14 +54,19 @@ private:
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
     std::vector<VkImageView> swapChainImageViews;
+    VkRenderPass renderPass;
     VkPipelineLayout pipelineLayout;
+    VkPipeline graphicsPipeline;
+    std::vector<VkFramebuffer> swapChainFramebuffers;
 
     void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
 
-    void createRenderPass(),
+    void createCommandPool();
+    void createFrameBuffers();
+    void createRenderPass();
     void createImageViews();
     void createSwapChain();
     void createSurface();
