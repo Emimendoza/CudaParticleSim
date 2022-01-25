@@ -9,11 +9,9 @@
 #include <stdexcept>
 
 #include <cstdlib>
+#include <cstring>
 
 using uint32 = uint32_t;
-const uint32 WIDTH = 800, HEIGHT = 600;
-
-
 
 VkResult VulkanApp::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
