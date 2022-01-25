@@ -53,12 +53,14 @@ private:
     std::vector<VkImage> swapChainImages;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
+    std::vector<VkImageView> swapChainImageViews;
 
     void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
 
+    void createImageViews();
     void createSwapChain();
     void createSurface();
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> & availableFormats);
