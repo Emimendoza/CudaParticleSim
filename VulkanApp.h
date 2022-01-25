@@ -54,12 +54,14 @@ private:
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
     std::vector<VkImageView> swapChainImageViews;
+    VkPipelineLayout pipelineLayout;
 
     void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
 
+    void createRenderPass(),
     void createImageViews();
     void createSwapChain();
     void createSurface();
@@ -92,6 +94,10 @@ private:
         }
         return VK_FALSE;
     }
+    void createGraphicsPipeline();
+    static std::vector<char> readFile(const std::string& filename);
+    VkShaderModule createShaderModule(const std::vector<char>& code);
+
 };
 
 
