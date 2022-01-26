@@ -3,14 +3,25 @@
 #define GLFW_INCLUDE_VULKAN
 #include <optional>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 #include <vector>
 #include <iostream>
+#include <array>
 
 class VulkanApp
 {
 public:
+    struct Vertex
+    {
+        glm::vec2 pos;
+        glm::vec3 color;
+        static VkVertexInputBindingDescription getBindingDescription();
+        static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
+    };
+
     const uint32_t WIDTH = 800, HEIGHT = 600;
     const uint MAX_FRAMES_IN_FLIGHT = 2;
+
     const std::vector<const char*> validationLayers =
             {
                     "VK_LAYER_KHRONOS_validation"
@@ -20,6 +31,13 @@ public:
             {
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME
             };
+
+
+    const std::vector<Vertex> vertices = {
+            {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
 
     bool enableValidationLayers = false;
     bool printDebugMessages = false;
@@ -41,6 +59,8 @@ private:
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };
+
+
 
     GLFWwindow* window;
     VkInstance instance;
@@ -66,12 +86,18 @@ private:
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+
 
     void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
 
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    void cleanupSwapChain();
+    void createVertexBuffer();
     void createSyncObjects();
     void drawFrame();
     void createCommandBuffers();
