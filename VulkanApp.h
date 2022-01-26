@@ -10,6 +10,7 @@ class VulkanApp
 {
 public:
     const uint32_t WIDTH = 800, HEIGHT = 600;
+    const uint MAX_FRAMES_IN_FLIGHT = 2;
     const std::vector<const char*> validationLayers =
             {
                     "VK_LAYER_KHRONOS_validation"
@@ -58,12 +59,22 @@ private:
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
     std::vector<VkFramebuffer> swapChainFramebuffers;
+    VkCommandPool commandPool;
+    std::vector<VkCommandBuffer> commandBuffers;
+    std::vector<VkSemaphore> imageAvailableSemaphores;
+    std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkFence> inFlightFences;
+    std::vector<VkFence> imagesInFlight;
+    size_t currentFrame = 0;
 
     void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
 
+    void createSyncObjects();
+    void drawFrame();
+    void createCommandBuffers();
     void createCommandPool();
     void createFrameBuffers();
     void createRenderPass();
