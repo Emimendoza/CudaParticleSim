@@ -3,6 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <optional>
 #include <GLFW/glfw3.h>
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <vector>
 #include <iostream>
@@ -42,6 +43,12 @@ public:
 
     const std::vector<uint32_t> indices{
         0,1,2,2,3,0
+    };
+
+    struct UniformBufferObject {
+        alignas(16) glm::mat4 model;
+        alignas(16) glm::mat4 view;
+        alignas(16) glm::mat4 proj;
     };
 
     bool enableValidationLayers = false;
@@ -95,13 +102,25 @@ private:
     VkDeviceMemory vertexBufferMemory;
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
-
+    VkDescriptorSetLayout descriptorSetLayout;
+    std::vector<VkBuffer> uniformBuffers;
+    std::vector<VkDeviceMemory> uniformBuffersMemory;
+    VkDescriptorPool descriptorPool;
+    bool framebufferResized = false;
+    std::vector<VkDescriptorSet> descriptorSets;
 
     void initWindow();
     void initVulkan();
     void mainLoop();
     void cleanup();
 
+    void createDescriptorSets();
+    void createDescriptorPool();
+    void updateUniformBuffer(uint32_t currentImage);
+    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+    void recreateSwapChain();
+    void createUniformBuffers();
+    void createDescriptorSetLayout();
     void createIndexBuffer();
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
