@@ -10,6 +10,8 @@
 #include <fstream>
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+#include <random>
+#include <functional>
 
 using uint32 = uint32_t;
 
@@ -31,10 +33,10 @@ void VulkanApp::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsM
 }
 void VulkanApp::run()
 {
-initWindow();
-initVulkan();
-mainLoop();
-cleanup();
+    initWindow();
+    initVulkan();
+    mainLoop();
+    cleanup();
 }
 void VulkanApp::initWindow()
 {
@@ -49,6 +51,7 @@ void VulkanApp::initWindow()
 
 void VulkanApp::initVulkan()
 {
+    createPoints();
     createInstance();
     setupDebugMessenger();
     createSurface();
@@ -535,7 +538,7 @@ void VulkanApp::createGraphicsPipeline()
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST ;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     VkViewport viewport{};
@@ -1184,9 +1187,9 @@ void VulkanApp::updateUniformBuffer(uint32 currentImage)
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(00.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    ubo.proj = glm::perspective(glm::radians(90.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
 
     void* data;
@@ -1246,6 +1249,23 @@ void VulkanApp::createDescriptorSets()
         descriptorWrite.pTexelBufferView = nullptr; // Optional
         vkUpdateDescriptorSets(vkDevice, 1, &descriptorWrite, 0, nullptr);
     }
+}
+
+void VulkanApp::createPoints()
+{
+    srand(duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    vertices.resize(pointCount);
+    indices.resize(pointCount);
+    for(int i = 0; i<pointCount; i++)
+    {
+        vertices[i] = {{randNum(),randNum()},{(randNum()+1)/2,(randNum()+1)/2,(randNum()+1)/2}};
+        indices[i] = i;
+    }
+}
+
+float VulkanApp::randNum()
+{
+   return -1 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(2)));
 }
 
 VkVertexInputBindingDescription VulkanApp::Vertex::getBindingDescription()

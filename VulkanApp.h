@@ -20,6 +20,7 @@ public:
         static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
     };
 
+    uint32_t pointCount = 10000;
     const uint32_t WIDTH = 800, HEIGHT = 600;
     const uint MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -33,17 +34,6 @@ public:
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME
             };
 
-
-    const std::vector<Vertex> vertices = {
-            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-    };
-
-    const std::vector<uint32_t> indices{
-        0,1,2,2,3,0
-    };
 
     struct UniformBufferObject {
         alignas(16) glm::mat4 model;
@@ -72,7 +62,9 @@ private:
         std::vector<VkPresentModeKHR> presentModes;
     };
 
+    std::vector<Vertex> vertices;
 
+    std::vector<uint32_t> indices;
 
     GLFWwindow* window;
     VkInstance instance;
@@ -114,6 +106,8 @@ private:
     void mainLoop();
     void cleanup();
 
+    static float randNum();
+    void createPoints();
     void createDescriptorSets();
     void createDescriptorPool();
     void updateUniformBuffer(uint32_t currentImage);
