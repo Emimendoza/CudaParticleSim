@@ -10,7 +10,6 @@
 #include <fstream>
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
-#include <random>
 #include <functional>
 
 using uint32 = uint32_t;
@@ -35,7 +34,9 @@ void VulkanApp::run()
 {
     initWindow();
     initVulkan();
+    (*initCuda)(this);
     mainLoop();
+    (*cleanupCuda)();
     cleanup();
 }
 void VulkanApp::initWindow()
@@ -79,6 +80,10 @@ void VulkanApp::mainLoop()
     {
         glfwPollEvents();
         drawFrame();
+
+        (*cudaStep)(this);
+        vkDeviceWaitIdle(vkDevice);
+        copyVertexToBuffer();
     }
     vkDeviceWaitIdle(vkDevice);
 }
@@ -1187,8 +1192,8 @@ void VulkanApp::updateUniformBuffer(uint32 currentImage)
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(00.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(1, 1, 1), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     ubo.proj = glm::perspective(glm::radians(90.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
 
@@ -1258,7 +1263,7 @@ void VulkanApp::createPoints()
     indices.resize(pointCount);
     for(int i = 0; i<pointCount; i++)
     {
-        vertices[i] = {{randNum(),randNum()},{(randNum()+1)/2,(randNum()+1)/2,(randNum()+1)/2}};
+        vertices[i] = {{randNum(),randNum(),randNum()},{(randNum()+1)/2,(randNum()+1)/2,(randNum()+1)/2}};
         indices[i] = i;
     }
 }
@@ -1267,6 +1272,24 @@ float VulkanApp::randNum()
 {
    return -1 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(2)));
 }
+
+void VulkanApp::copyVertexToBuffer()
+{
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(vkDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t) bufferSize);
+    vkUnmapMemory(vkDevice, stagingBufferMemory);
+    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+    vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
+    vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
+}
+
 
 VkVertexInputBindingDescription VulkanApp::Vertex::getBindingDescription()
 {
@@ -1284,7 +1307,7 @@ VkVertexInputBindingDescription VulkanApp::Vertex::getBindingDescription()
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
     attributeDescriptions[1].binding = 0;

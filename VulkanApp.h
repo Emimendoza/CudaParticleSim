@@ -14,13 +14,17 @@ class VulkanApp
 public:
     struct Vertex
     {
-        glm::vec2 pos;
+        glm::vec3 pos;
         glm::vec3 color;
         static VkVertexInputBindingDescription getBindingDescription();
         static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
     };
 
-    uint32_t pointCount = 10000;
+    void (*cudaStep)(VulkanApp*);
+    void (*initCuda)(VulkanApp*);
+    void (*cleanupCuda)();
+
+    uint32_t pointCount = 4;
     const uint32_t WIDTH = 800, HEIGHT = 600;
     const uint MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -46,6 +50,9 @@ public:
 
     void run();
 
+    std::vector<Vertex> vertices;
+
+    std::vector<uint32_t> indices;
 
 private:
     struct QueueFamilyIndices
@@ -61,10 +68,6 @@ private:
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };
-
-    std::vector<Vertex> vertices;
-
-    std::vector<uint32_t> indices;
 
     GLFWwindow* window;
     VkInstance instance;
@@ -106,6 +109,7 @@ private:
     void mainLoop();
     void cleanup();
 
+    void copyVertexToBuffer();
     static float randNum();
     void createPoints();
     void createDescriptorSets();

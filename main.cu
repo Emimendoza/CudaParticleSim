@@ -1,9 +1,30 @@
 #include <iostream>
 #include "VulkanApp.h"
+#include "CudaGravSim.h"
+
+CudaGravSim sim;
+
+void initCuda(VulkanApp* it)
+{
+    sim.initArrays(it->vertices);
+}
+
+void step(VulkanApp* it)
+{
+    sim.step();
+    sim.copyData(&it->vertices);
+}
+void cleanupCuda()
+{
+    sim.cleanup();
+}
 
 int main(int argc, char** argv)
 {
     VulkanApp app;
+    app.initCuda = initCuda;
+    app.cudaStep = step;
+    app.cleanupCuda = cleanupCuda;
 
     for(int i = 0; i<argc; i++)
     {
