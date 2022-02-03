@@ -2,89 +2,80 @@
 
 #include "CudaGravSim.h"
 
-__global__ void getAllForces(CudaGravSim::Particle* particles,double** forces, double g, uint32_t size)
+__global__ void getAllForces(CudaGravSim::Particle* particles,double* forces, double g, uint32_t size)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
-    if(particleId>size)
+    if(particleId>=size)
     {
         return;
     }
-    CudaGravSim::Particle particle = particles[particleId];
-    forces[particleId][0] = 0;
-    forces[particleId][1] = 0;
-    forces[particleId][2] = 0;
+    forces[particleId*3+0] = 0;
+    forces[particleId*3+1] = 0;
+    forces[particleId*3+2] = 0;
     for(uint32_t index = 0; index<size; index++)
     {
         if (particleId != index)
         {
-            CudaGravSim::Particle otherParticle = particles[index];
 
-            double deltaX = particle.pos.x - otherParticle.pos.x;
-            double deltaY = particle.pos.y - otherParticle.pos.y;
-            double deltaZ = particle.pos.z - otherParticle.pos.z;
+            double deltaX = particles[particleId].pos.x - particles[index].pos.x;
+            double deltaY = particles[particleId].pos.y - particles[index].pos.y;
+            double deltaZ = particles[particleId].pos.z - particles[index].pos.z;
 
-            double totalForce = g * (particle.mass * otherParticle.mass) / (pow(deltaX, 2) + pow(deltaY, 2) + pow(deltaZ, 2));
-            // Calculate z comp
+            double absoluteDistance = sqrt(pow(deltaX, 2) + pow(deltaY, 2) + pow(deltaZ, 2));
+            double totalForce = g * (particles[particleId].mass * particles[index].mass) /pow(absoluteDistance,3);
 
-            double angle1 = acos(deltaX / (sqrt(pow(deltaX, 2) + pow(deltaZ, 2))));
-            double remainder = sin(angle1) * totalForce;
-            forces[particleId][2] += totalForce - remainder;
-            // Calculate x comp
-            double angle2 = acos(deltaX / sqrt(pow(deltaX, 2) + pow(deltaY, 2)));
-            totalForce = remainder * sin(angle2);
-            forces[particleId][0] += remainder - totalForce;
-            // Calculate y comp
-            forces[particleId][1] += totalForce;
+            forces[index*3+0] += totalForce*deltaX;
+            forces[index*3+1] += totalForce*deltaY;
+            forces[index*3+2] += totalForce*deltaZ;
         }
     }
 }
 
-__global__ void getFinalPosition(double** forces, CudaGravSim::Particle* particles, uint32_t size, ulong timeStep)
+__global__ void getFinalPosition(double* forces, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
-    if(particleId>size)
+    if(particleId>=size)
     {
         return;
     }
-    CudaGravSim::Particle particle = particles[particleId];
-    particle.pos.x += particle.vel.x*timeStep+(forces[particleId][0]/particle.mass*timeStep*timeStep)/2.0;
-    particle.pos.y += particle.vel.y*timeStep+(forces[particleId][1]/particle.mass*timeStep*timeStep)/2.0;
-    particle.pos.z += particle.vel.z*timeStep+(forces[particleId][2]/particle.mass*timeStep*timeStep)/2.0;
+    double time = pow(timeStep,2);
+    particles[particleId].pos.x += particles[particleId].vel.x*timeStep+(forces[particleId*3+0]/particles[particleId].mass*time)/2.0;
+    particles[particleId].pos.y += particles[particleId].vel.y*timeStep+(forces[particleId*3+1]/particles[particleId].mass*time)/2.0;
+    particles[particleId].pos.z += particles[particleId].vel.z*timeStep+(forces[particleId*3+2]/particles[particleId].mass*time)/2.0;
 }
 
-__global__ void getFinalVelocity(double** forces, CudaGravSim::Particle* particles, uint32_t size, ulong timeStep)
+__global__ void getFinalVelocity(double* forces, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
-    if(particleId>size)
+    if(particleId>=size)
     {
         return;
     }
-    CudaGravSim::Particle particle = particles[particleId];
-    particle.vel.x += forces[particleId][0]/particle.mass*timeStep;
-    particle.vel.y += forces[particleId][1]/particle.mass*timeStep;
-    particle.vel.z += forces[particleId][2]/particle.mass*timeStep;
+    particles[particleId].vel.x += forces[particleId*3+0]/particles[particleId].mass*timeStep;
+    particles[particleId].vel.y += forces[particleId*3+1]/particles[particleId].mass*timeStep;
+    particles[particleId].vel.z += forces[particleId*3+2]/particles[particleId].mass*timeStep;
 }
 
 void CudaGravSim::initArrays(std::vector<VulkanApp::Vertex> vertecies)
 {
     size = vertecies.size();
-    particleArrayHost = (Particle*) (malloc(sizeof(Particle) * size));
-    cudaMalloc(&particleArrayDevice, sizeof(Particle)*size);
-
-    for(uint32_t i = 0; i < vertecies.size(); i++)
+    cudaMalloc(&particleArrayDevice,sizeof(Particle)*size);
+    cudaMalloc(&forces,sizeof(double)*size*3);
+    particleArrayHost = static_cast<Particle *>(malloc(sizeof(Particle) * size));
+    for(uint32_t i = 0; i<size; i++)
     {
         particleArrayHost[i].pos = vertecies[i].pos;
+        particleArrayHost[i].mass = 10;
+        particleArrayHost[i].vel = {0,0,0};
     }
-    cudaMemcpy(particleArrayDevice,particleArrayHost,sizeof(Particle)*size,cudaMemcpyHostToDevice);
-
-    cudaMalloc(&forces,sizeof(double)*3*size);
+    cudaMemcpy(particleArrayDevice,particleArrayHost,size*sizeof(Particle),cudaMemcpyHostToDevice);
 }
 
 void CudaGravSim::cleanup()
 {
     free(particleArrayHost);
-    cudaFree(forces);
     cudaFree(particleArrayDevice);
+    cudaFree(forces);
 }
 
 void CudaGravSim::step()
@@ -97,7 +88,7 @@ void CudaGravSim::step()
 
 void CudaGravSim::copyData(std::vector<VulkanApp::Vertex> *vertecies)
 {
-    std::vector<VulkanApp::Vertex> vert = *vertecies;
+    std::vector<VulkanApp::Vertex>& vert = *vertecies;
     for(uint32_t i = 0; i<size; i++)
     {
         vert[i].pos = particleArrayHost[i].pos;
@@ -106,6 +97,9 @@ void CudaGravSim::copyData(std::vector<VulkanApp::Vertex> *vertecies)
 
 void CudaGravSim::sync()
 {
-    cudaMemcpy(particleArrayHost,particleArrayDevice,sizeof(Particle)*size,cudaMemcpyDeviceToHost);
+    double* temp;
+    temp = (double*) malloc(sizeof(double )*3*size);
+    cudaMemcpy(particleArrayHost,particleArrayDevice,size*sizeof(Particle),cudaMemcpyDeviceToHost);
+    cudaMemcpy(temp,forces,size*sizeof(double)*3,cudaMemcpyDeviceToHost);
+    free(temp);
 }
-

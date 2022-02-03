@@ -24,7 +24,7 @@ public:
     void (*initCuda)(VulkanApp*);
     void (*cleanupCuda)();
 
-    uint32_t pointCount = 4;
+    uint32_t pointCount = 100;
     const uint32_t WIDTH = 800, HEIGHT = 600;
     const uint MAX_FRAMES_IN_FLIGHT = 2;
 

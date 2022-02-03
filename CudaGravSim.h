@@ -9,13 +9,13 @@ class CudaGravSim
 public:
     struct Particle
     {
-        double mass = 1000000000;
+        double mass;
         glm::vec3 pos;
         glm::vec3 vel;
     };
 
-    ulong timeStep = 1000;
-    double gravitationalConstant = 1; //6.67408 * pow(10,-11);
+    double timeStep = 1;
+    double gravitationalConstant =  6.67408 * pow(10,-11);
 
     void initArrays(std::vector<VulkanApp::Vertex> vertecies);
     void step();
@@ -26,7 +26,7 @@ private:
 
     Particle* particleArrayDevice;
     Particle* particleArrayHost;
-    double** forces;
+    double* forces;
     uint32_t size;
 
     void sync();
