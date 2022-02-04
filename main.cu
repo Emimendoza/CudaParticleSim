@@ -2,21 +2,23 @@
 #include "VulkanApp.h"
 #include "CudaGravSim.h"
 
-CudaGravSim sim;
+CudaGravSim *sim;
 
 void initCuda(VulkanApp* it)
 {
-    sim.initArrays(it->vertices);
+    sim = new CudaGravSim(it->eye);
+    sim->initArrays(it->vertices);
 }
 
 void step(VulkanApp* it)
 {
-    sim.step();
-    sim.copyData(&it->vertices);
+    sim->step();
+    sim->copyData(&it->vertices);
 }
 void cleanupCuda()
 {
-    sim.cleanup();
+    sim->cleanup();
+    delete sim;
 }
 
 int main(int argc, char** argv)

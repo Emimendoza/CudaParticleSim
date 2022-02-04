@@ -2,7 +2,7 @@
 
 #include "CudaGravSim.h"
 
-__global__ void getAllForces(CudaGravSim::Particle* particles,double* forces, double g, uint32_t size)
+__global__ void getAllForces(CudaGravSim::Particle* particles,double* forces, double g, uint32_t size, glm::vec3 cameraPos)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
     if(particleId>=size)
@@ -29,9 +29,10 @@ __global__ void getAllForces(CudaGravSim::Particle* particles,double* forces, do
             forces[index*3+2] += totalForce*deltaZ;
         }
     }
+    particles[particleId].size=4/(pow(particles[particleId].pos.x-cameraPos.x,2)+pow(particles[particleId].pos.y-cameraPos.y,2)+pow(particles[particleId].pos.z-cameraPos.z,2));
 }
 
-__global__ void getFinalPosition(double* forces, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
+__global__ void getFinalPosition(const double* forces, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
     if(particleId>=size)
@@ -44,7 +45,7 @@ __global__ void getFinalPosition(double* forces, CudaGravSim::Particle* particle
     particles[particleId].pos.z += particles[particleId].vel.z*timeStep+(forces[particleId*3+2]/particles[particleId].mass*time)/2.0;
 }
 
-__global__ void getFinalVelocity(double* forces, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
+__global__ void getFinalVelocity(const double* forces, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
     if(particleId>=size)
@@ -64,10 +65,13 @@ void CudaGravSim::initArrays(std::vector<VulkanApp::Vertex> vertecies)
     particleArrayHost = static_cast<Particle *>(malloc(sizeof(Particle) * size));
     for(uint32_t i = 0; i<size; i++)
     {
-        particleArrayHost[i].pos = vertecies[i].pos;
-        particleArrayHost[i].mass = 10;
+        particleArrayHost[i].pos = {vertecies[i].pos.x,vertecies[i].pos.y,vertecies[i].pos.z};
+        particleArrayHost[i].mass = 1;
         particleArrayHost[i].vel = {0,0,0};
     }
+    particleArrayHost[0].pos = {0.25,0,0.25};
+    particleArrayHost[0].mass = 1000;
+    particleArrayHost[0].vel= {0,0,0};
     cudaMemcpy(particleArrayDevice,particleArrayHost,size*sizeof(Particle),cudaMemcpyHostToDevice);
 }
 
@@ -80,7 +84,7 @@ void CudaGravSim::cleanup()
 
 void CudaGravSim::step()
 {
-    getAllForces<<<std::ceil(size/1024.0),1024>>>(particleArrayDevice,forces,gravitationalConstant,size);
+    getAllForces<<<std::ceil(size/1024.0),1024>>>(particleArrayDevice,forces,gravitationalConstant,size,cameraPos);
     getFinalPosition<<<std::ceil(size/1024.0),1024>>>(forces, particleArrayDevice,size,timeStep);
     getFinalVelocity<<<std::ceil(size/1024.0),1024>>>(forces,particleArrayDevice,size,timeStep);
     sync();
@@ -91,7 +95,7 @@ void CudaGravSim::copyData(std::vector<VulkanApp::Vertex> *vertecies)
     std::vector<VulkanApp::Vertex>& vert = *vertecies;
     for(uint32_t i = 0; i<size; i++)
     {
-        vert[i].pos = particleArrayHost[i].pos;
+        vert[i].pos = {particleArrayHost[i].pos.x,particleArrayHost[i].pos.y,particleArrayHost[i].pos.z,particleArrayHost[i].size};
     }
 }
 
@@ -102,4 +106,8 @@ void CudaGravSim::sync()
     cudaMemcpy(particleArrayHost,particleArrayDevice,size*sizeof(Particle),cudaMemcpyDeviceToHost);
     cudaMemcpy(temp,forces,size*sizeof(double)*3,cudaMemcpyDeviceToHost);
     free(temp);
+}
+
+CudaGravSim::CudaGravSim(glm::vec3 &cameraPos) : cameraPos(cameraPos)
+{
 }

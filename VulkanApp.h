@@ -14,7 +14,7 @@ class VulkanApp
 public:
     struct Vertex
     {
-        glm::vec3 pos;
+        glm::vec4 pos;
         glm::vec3 color;
         static VkVertexInputBindingDescription getBindingDescription();
         static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions();
@@ -24,7 +24,7 @@ public:
     void (*initCuda)(VulkanApp*);
     void (*cleanupCuda)();
 
-    uint32_t pointCount = 100;
+    uint32_t pointCount = 1000;
     const uint32_t WIDTH = 800, HEIGHT = 600;
     const uint MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -38,6 +38,7 @@ public:
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME
             };
 
+    glm::vec3 eye = {1, 0, 1};
 
     struct UniformBufferObject {
         alignas(16) glm::mat4 model;
@@ -110,7 +111,7 @@ private:
     void cleanup();
 
     void copyVertexToBuffer();
-    static float randNum();
+    static float randNum(double low, double high);
     void createPoints();
     void createDescriptorSets();
     void createDescriptorPool();
