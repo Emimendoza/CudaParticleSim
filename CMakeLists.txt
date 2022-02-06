@@ -28,14 +28,14 @@ function(compile_shader target)
 endfunction()
 
 
-add_executable(Test main.cu CudaGravSim.cu CudaGravSim.h VulkanApp.h VulkanApp.cpp)
+add_executable(Test ./src/main.cu ./src/CudaGravSim.cu ./src/CudaGravSim.h ./src/VulkanApp.h ./src/VulkanApp.cpp)
 
 compile_shader(Test
         ENV vulkan1.2
         FORMAT bin
         SOURCES
-            ./shaders/shader.frag
-            ./shaders/shader.vert
+            ./src/shaders/shader.frag
+            ./src/shaders/shader.vert
         )
 
 target_link_libraries(Test -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi)

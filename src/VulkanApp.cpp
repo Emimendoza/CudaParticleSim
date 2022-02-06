@@ -507,8 +507,8 @@ void VulkanApp::createRenderPass()
 
 void VulkanApp::createGraphicsPipeline()
 {
-    auto vertShaderCode = readFile("./shaders/shader.vert.bin");
-    auto fragShaderCode = readFile("./shaders/shader.frag.bin");
+    auto vertShaderCode = readFile("./src/shaders/shader.vert.bin");
+    auto fragShaderCode = readFile("./src/shaders/shader.frag.bin");
     if(printDebugMessages)
     {
         std::cout<< "Shaders successfully read" << std::endl;
