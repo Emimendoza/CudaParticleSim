@@ -39,6 +39,10 @@ int main(int argc, char** argv)
             app.enableValidationLayers = true;
             app.printDebugMessages = true;
         }
+        if(strcmp(argv[i],"--single-frame")==0)
+        {
+            app.singleFrame = true;
+        }
     }
 
     if(app.enableValidationLayers)

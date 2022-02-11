@@ -25,6 +25,7 @@ public:
     void (*cleanupCuda)();
 
     uint32_t pointCount = 1000;
+    bool singleFrame = false;
     const uint32_t WIDTH = 800, HEIGHT = 600;
     const uint MAX_FRAMES_IN_FLIGHT = 2;
 

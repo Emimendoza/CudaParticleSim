@@ -76,7 +76,7 @@ void VulkanApp::initVulkan()
 
 void VulkanApp::mainLoop()
 {
-    while (!glfwWindowShouldClose(window))
+    if(singleFrame)
     {
         glfwPollEvents();
         drawFrame();
@@ -84,6 +84,18 @@ void VulkanApp::mainLoop()
         (*cudaStep)(this);
         vkDeviceWaitIdle(vkDevice);
         copyVertexToBuffer();
+    }
+    else
+    {
+        while (!glfwWindowShouldClose(window))
+        {
+            glfwPollEvents();
+            drawFrame();
+
+            (*cudaStep)(this);
+            vkDeviceWaitIdle(vkDevice);
+            copyVertexToBuffer();
+        }
     }
     vkDeviceWaitIdle(vkDevice);
 }
