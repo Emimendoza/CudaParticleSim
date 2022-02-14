@@ -13,7 +13,7 @@ __global__ void initForces(CudaGravSim::vec3* force, CudaGravSim::vec3* force2, 
     force2[particleId] = {0,0,0};
 }
 
-__global__ void getAllForces(CudaGravSim::Particle* particles, CudaGravSim::vec3* forces, double g, uint32_t size, CudaGravSim::vec3 cameraPos)
+__global__ void getAllForces(CudaGravSim::Particle* particles, CudaGravSim::vec3* forces, float g, uint32_t size, CudaGravSim::vec3 cameraPos)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
     if(particleId>=size)
@@ -27,8 +27,8 @@ __global__ void getAllForces(CudaGravSim::Particle* particles, CudaGravSim::vec3
         {
             CudaGravSim::vec3 delta = particles[particleId].pos - particles[index].pos;
 
-            double absoluteDistance = sqrt(delta.square().sum());
-            double totalForce = g * (particles[particleId].mass * particles[index].mass) /pow(absoluteDistance,3);
+            float absoluteDistance = sqrt(delta.square().sum());
+            float totalForce = g * (particles[particleId].mass * particles[index].mass) /pow(absoluteDistance,3);
 
             forces[index] += delta*totalForce;
         }
@@ -36,18 +36,18 @@ __global__ void getAllForces(CudaGravSim::Particle* particles, CudaGravSim::vec3
     particles[particleId].size=4/(particles[particleId].pos-cameraPos).square().sum();
 }
 
-__global__ void getFinalPosition(CudaGravSim::vec3* forces, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
+__global__ void getFinalPosition(CudaGravSim::vec3* forces, CudaGravSim::Particle* particles, uint32_t size, float timeStep)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
     if(particleId>=size)
     {
         return;
     }
-    double time = pow(timeStep,2);
+    float time = pow(timeStep,2);
     particles[particleId].pos += particles[particleId].vel*timeStep+(forces[particleId]*time/(particles[particleId].mass*2));
 }
 
-__global__ void getFinalVelocity(CudaGravSim::vec3 *forces,CudaGravSim::vec3* forces2, CudaGravSim::Particle* particles, uint32_t size, double timeStep)
+__global__ void getFinalVelocity(CudaGravSim::vec3 *forces,CudaGravSim::vec3* forces2, CudaGravSim::Particle* particles, uint32_t size, float timeStep)
 {
     uint32_t particleId = blockDim.x * blockIdx.x + threadIdx.x;
     if(particleId>=size)

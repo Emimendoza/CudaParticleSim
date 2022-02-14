@@ -11,9 +11,9 @@ public:
 
     struct vec3{
 
-        double x;
-        double y;
-        double z;
+        float x;
+        float y;
+        float z;
 
         __device__ __host__ vec3& operator=(glm::vec3& vec1)
         {
@@ -39,7 +39,7 @@ public:
             result.z=other.z*this->z;
             return result;
         }
-        __device__ __host__ vec3 operator*(double other) const
+        __device__ __host__ vec3 operator*(float other) const
         {
             vec3 result{};
             result.x = other * this->x;
@@ -48,7 +48,7 @@ public:
             return result;
         }
 
-        __device__ __host__ vec3 operator/(double other) const
+        __device__ __host__ vec3 operator/(float other) const
         {
             vec3 results{};
             results.x = this->x/other;
@@ -83,22 +83,22 @@ public:
         {
             return (*this)*(*this);
         }
-        __device__ __host__ double sum() const
+        __device__ __host__ float sum() const
         {
             return this->x+this->y+this->z;
         }
     };
     struct Particle
     {
-        double mass;
+        float mass;
         vec3 pos;
         vec3 vel;
-        double size;
+        float size;
     };
 
-    double timeStep = 1000;
+    float timeStep = 1000;
     vec3 cameraPos{};
-    double gravitationalConstant =  1.559*pow(10,(-13)); // ly cubed/(solar mass (year) squared)
+    float gravitationalConstant =  1.559*pow(10,(-13)); // ly cubed/(solar mass (year) squared)
 
     void initArrays(std::vector<VulkanApp::Vertex> vertecies);
     void step();
