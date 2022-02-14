@@ -43,6 +43,10 @@ int main(int argc, char** argv)
         {
             app.singleFrame = true;
         }
+        if(strlen(argv[i])>9 && strcmp(std::string(argv[i]).substr(0,9).c_str(),"--points=")==0)
+        {
+            app.pointCount = std::stoi(std::string(argv[i]).substr(9,std::string::npos));
+        }
     }
 
     if(app.enableValidationLayers)
