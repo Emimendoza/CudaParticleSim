@@ -15,7 +15,7 @@ struct mephvec3{
         return *this;
     }
 
-    __device__ __host__ mephvec3& operator=(glm::vec4& vec1)
+    __device__ __host__ mephvec3& operator=(const glm::vec4& vec1)
     {
         this->x = vec1.x;
         this->y = vec1.y;
@@ -23,7 +23,7 @@ struct mephvec3{
         return *this;
     }
 
-    __device__ __host__ mephvec3 operator*(mephvec3 other) const
+    __device__ __host__ mephvec3 operator*(const mephvec3& other) const
     {
         mephvec3 result{};
         result.x=other.x*this->x;
@@ -31,7 +31,7 @@ struct mephvec3{
         result.z=other.z*this->z;
         return result;
     }
-    __device__ __host__ mephvec3 operator*(float other) const
+    __device__ __host__ mephvec3 operator*(const float& other) const
     {
         mephvec3 result{};
         result.x = other * this->x;
@@ -40,7 +40,7 @@ struct mephvec3{
         return result;
     }
 
-    __device__ __host__ mephvec3 operator/(float other) const
+    __device__ __host__ mephvec3 operator/(const float& other) const
     {
         mephvec3 results{};
         results.x = this->x/other;
@@ -49,7 +49,7 @@ struct mephvec3{
         return results;
     }
 
-    __device__ __host__ mephvec3 operator-(mephvec3 other) const
+    __device__ __host__ mephvec3 operator-(const mephvec3& other) const
     {
         mephvec3 result{};
         result.x = this->x-other.x;
@@ -57,7 +57,7 @@ struct mephvec3{
         result.z = this->z-other.z;
         return result;
     }
-    __device__ __host__ mephvec3 operator+(mephvec3 other) const
+    __device__ __host__ mephvec3 operator+(const mephvec3& other) const
     {
         mephvec3 result{};
         result.x = this->x+other.x;
@@ -65,7 +65,7 @@ struct mephvec3{
         result.z = this->z+other.z;
         return result;
     }
-    __device__ __host__ void operator+=(mephvec3 other)
+    __device__ __host__ void operator+=(const mephvec3& other)
     {
         this->x+= other.x;
         this->y+= other.y;
@@ -132,7 +132,7 @@ __global__ void getAllForces(Particle* particles, mephvec3* forcesf, float g, ui
             mephvec3 delta = particles[particleId].pos - particles[index].pos;
 
             float absoluteDistance = sqrt(delta.square().sum());
-            float totalForce = g * (particles[particleId].mass * particles[index].mass) /pow(absoluteDistance,3);
+            float totalForce = g * (particles[particleId].mass * particles[index].mass) /(absoluteDistance*absoluteDistance*absoluteDistance);
 
             forcesf[index] += delta*totalForce;
         }
@@ -147,7 +147,7 @@ __global__ void getFinalPosition(mephvec3* forcesf, Particle* particles, uint32_
     {
         return;
     }
-    float time = pow(timeStepf,2);
+    float time = timeStepf*timeStepf;
     particles[particleId].pos += particles[particleId].vel*timeStepf+(forcesf[particleId]*time/(particles[particleId].mass*2));
 }
 
@@ -175,7 +175,7 @@ void initArrays(std::vector<VulkanApp::Vertex> vertecies)
         particleArrayHost[i].vel = {0,0,0};
     }
     particleArrayHost[0].pos = {0.25,0,0.25};
-    particleArrayHost[0].mass = 10;
+    particleArrayHost[0].mass = 1;
     particleArrayHost[0].vel= {0,0,0};
     cudaMemcpy(particleArrayDevice,particleArrayHost,size*sizeof(Particle),cudaMemcpyHostToDevice);
     initForces<<<ceil(size/1024.0),1024>>>(forces, forces2, size);
