@@ -28,7 +28,7 @@ function(compile_shader target)
 endfunction()
 
 
-add_executable(Test ./src/main.cu ./src/CudaGravSim.cu ./src/CudaGravSim.h ./src/VulkanApp.h ./src/VulkanApp.cpp)
+add_executable(Test ./src/main.cu ./src/VulkanApp.h ./src/VulkanApp.cpp)
 
 compile_shader(Test
         ENV vulkan1.2
