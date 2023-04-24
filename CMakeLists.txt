@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 3.21)
-project(Test CUDA)
+cmake_minimum_required(VERSION 3.18)
+
+set(CMAKE_CUDA_ARCHITECTURES 60 61 62 70 72 75 86)
 
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CXX_STANDARD 20)
 project(Test LANGUAGES CUDA CXX)
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-ccbin gcc-11")
 
 find_package(Vulkan COMPONENTS glslc)
 find_program(glslc_executable NAMES glslc HINTS Vulkan::glslc)

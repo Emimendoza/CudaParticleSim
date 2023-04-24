@@ -1,3 +1,4 @@
+// VulkanApp.cpp
 #define GLFW_INCLUDE_VULKAN
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include "VulkanApp.h"
@@ -14,20 +15,20 @@
 
 using uint32 = uint32_t;
 
-VkResult VulkanApp::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+VkResult VulkanApp::CreateDebugUtilsMessengerEXT(VkInstance instanceDbg, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instanceDbg, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+        return func(instanceDbg, pCreateInfo, pAllocator, pDebugMessenger);
     } else {
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 }
-void VulkanApp::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+void VulkanApp::DestroyDebugUtilsMessengerEXT(VkInstance instanceDbg, VkDebugUtilsMessengerEXT debugMessengerDbg, const VkAllocationCallbacks* pAllocator)
 {
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instanceDbg, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
-        func(instance, debugMessenger, pAllocator);
+        func(instanceDbg, debugMessengerDbg, pAllocator);
     }
 }
 void VulkanApp::run()
@@ -52,6 +53,10 @@ void VulkanApp::initWindow()
 
 void VulkanApp::initVulkan()
 {
+    if(interOp)
+    {
+        deviceExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
+    }
     createPoints();
     createInstance();
     setupDebugMessenger();
@@ -66,6 +71,7 @@ void VulkanApp::initVulkan()
     createFrameBuffers();
     createCommandPool();
     createVertexBuffer();
+    createCopyBuffer();
     createIndexBuffer();
     createUniformBuffers();
     createDescriptorPool();
@@ -105,6 +111,10 @@ void VulkanApp::cleanup()
     cleanupSwapChain();
 
     vkDestroyDescriptorSetLayout(vkDevice, descriptorSetLayout, nullptr);
+
+    vkUnmapMemory(vkDevice, copyVertexBufferMemory);
+    vkDestroyBuffer(vkDevice, copyVertexBuffer, nullptr);
+    vkFreeMemory(vkDevice, copyVertexBufferMemory, nullptr);
 
     vkDestroyBuffer(vkDevice, indexBuffer, nullptr);
     vkFreeMemory(vkDevice, indexBufferMemory, nullptr);
@@ -187,13 +197,26 @@ void ::VulkanApp::createDescriptorSetLayout()
 
 }
 
-void VulkanApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+void VulkanApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,VkBuffer &buffer, VkDeviceMemory &bufferMemory)
+{
+    createBuffer(size,usage,properties,buffer,bufferMemory, false);
+}
+
+void VulkanApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory, bool external)
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    if(external)
+    {
+        VkExternalMemoryBufferCreateInfo extBufferCreateInfo = {};
+        extBufferCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO_KHR;
+        extBufferCreateInfo.handleTypes |= VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+        bufferInfo.pNext = &extBufferCreateInfo;
+    }
+
 
     if (vkCreateBuffer(vkDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
     {
@@ -208,12 +231,20 @@ void VulkanApp::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemo
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(vkDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
+    if (external)
+    {
+        VkExportMemoryAllocateInfoKHR exportInfo = {};
+        exportInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR;
+        exportInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+        allocInfo.pNext = &exportInfo;
+    }
+
+    if (vkAllocateMemory(vkDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS
+    || vkBindBufferMemory(vkDevice, buffer, bufferMemory, 0) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to allocate buffer memory!");
     }
 
-    vkBindBufferMemory(vkDevice, buffer, bufferMemory, 0);
 }
 
 void VulkanApp::createVertexBuffer()
@@ -698,10 +729,10 @@ void VulkanApp::createSwapChain()
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-    uint32 queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+    QueueFamilyIndices QFI = findQueueFamilies(physicalDevice);
+    uint32 queueFamilyIndices[] = {QFI.graphicsFamily.value(), QFI.presentFamily.value()};
 
-    if (indices.graphicsFamily != indices.presentFamily)
+    if (QFI.graphicsFamily != QFI.presentFamily)
     {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.queueFamilyIndexCount = 2;
@@ -760,6 +791,10 @@ VkPresentModeKHR VulkanApp::chooseSwapPresentMode(const std::vector<VkPresentMod
 {
     for (const auto& availablePresentMode : availablePresentModes)
     {
+        if (vsyncOff && availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+        {
+            return availablePresentMode;
+        }
         if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
         {
             return availablePresentMode;
@@ -1285,21 +1320,36 @@ float VulkanApp::randNum(double low, double high)
    return low + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(high-low)));
 }
 
+void VulkanApp::createCopyBuffer()
+{
+    copyVertexBufferSize = sizeof(vertices[0]) * vertices.size();
+    if (interOp)
+    {
+        createBuffer(copyVertexBufferSize,VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, copyVertexBuffer,copyVertexBufferMemory,true);
+        VkMemoryGetFdInfoKHR fdInfo = { };
+        fdInfo.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
+        fdInfo.memory = copyVertexBufferMemory;
+        fdInfo.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+        auto getMemFunc = (PFN_vkGetMemoryFdKHR) vkGetDeviceProcAddr(vkDevice,"vkGetMemoryFdKHR");
+        if (!getMemFunc) {
+            throw std::runtime_error("Failed to locate function vkGetMemoryFdKHR\n");
+        }
+        VkResult r = getMemFunc(vkDevice, &fdInfo, &externMemoryHandle);
+        if (r != VK_SUCCESS) {
+            throw std::runtime_error("Failed executing vkGetMemoryFdKHR");
+        }
+    }
+    else
+    {
+        createBuffer(copyVertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, copyVertexBuffer, copyVertexBufferMemory);
+        vkMapMemory(vkDevice, copyVertexBufferMemory, 0, copyVertexBufferSize, 0, &localCopyVertexBufferMemory);
+    }
+}
+
 void VulkanApp::copyVertexToBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-    void* data;
-    vkMapMemory(vkDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferSize);
-    vkUnmapMemory(vkDevice, stagingBufferMemory);
-    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-    vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
-    vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
+    memcpy(localCopyVertexBufferMemory, vertices.data(), (size_t) copyVertexBufferSize);
+    copyBuffer(copyVertexBuffer, vertexBuffer, copyVertexBufferSize);
 }
 
 

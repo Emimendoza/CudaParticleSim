@@ -1,3 +1,4 @@
+// VulkanApp.h
 #ifndef TEST_VULKANAPP_H
 #define TEST_VULKANAPP_H
 #define GLFW_INCLUDE_VULKAN
@@ -26,6 +27,12 @@ public:
 
     uint32_t pointCount = 1000;
     bool singleFrame = false;
+    bool vsyncOff = false;
+    bool calcEnergy = false;
+    bool exportEnergy = false;
+    bool calcMomentum = false;
+    bool exportMomentum = false;
+    bool interOp = false;
     const uint32_t WIDTH = 800, HEIGHT = 600;
     const uint MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -34,7 +41,7 @@ public:
                     "VK_LAYER_KHRONOS_validation"
             };
 
-    const std::vector<const char*> deviceExtensions =
+    std::vector<const char*> deviceExtensions =
             {
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME
             };
@@ -99,6 +106,11 @@ private:
     VkDeviceMemory vertexBufferMemory;
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
+    VkBuffer copyVertexBuffer;
+    VkDeviceMemory copyVertexBufferMemory;
+    VkDeviceSize copyVertexBufferSize;
+    void* localCopyVertexBufferMemory;
+    int externMemoryHandle;
     VkDescriptorSetLayout descriptorSetLayout;
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
@@ -111,6 +123,7 @@ private:
     void mainLoop();
     void cleanup();
 
+    void createCopyBuffer();
     void copyVertexToBuffer();
     static float randNum(double low, double high);
     void createPoints();
@@ -123,6 +136,7 @@ private:
     void createDescriptorSetLayout();
     void createIndexBuffer();
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory, bool external);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     void cleanupSwapChain();
